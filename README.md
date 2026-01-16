@@ -50,3 +50,23 @@ stow -D nvim
 2. Mirror the home directory structure inside it
 3. Move your config: `mv ~/.newapprc newapp/.newapprc`
 4. Stow it: `stow newapp`
+
+## Updating Changes
+
+Since Stow creates symlinks, edits to files in this repo are automatically reflected in your home directory.
+
+**For shell configs (zsh):**
+```bash
+source ~/.zshrc
+```
+
+**For apps that need restart:**
+- **kitty**: Close and reopen terminal
+- **yabai**: `yabai --restart-service`
+- **skhd**: `skhd --restart-service`
+- **nvim**: Reopen Neovim
+
+**If you added new files to an existing package:**
+```bash
+stow -R zsh  # Re-stow to pick up new files
+```
