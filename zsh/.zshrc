@@ -296,7 +296,7 @@ export PATH=$PATH:$GOPATH/bin
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="robbyrussell"
+ZSH_THEME=""
 
 plugins=(
   git
@@ -336,3 +336,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 export PATH="$PATH:$HOME/personal/worldbanc/private/bin"
+
+# Starship prompt
+eval "$(starship init zsh)"
