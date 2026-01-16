@@ -1,0 +1,23 @@
+# Neovim runtime files
+plugin/
+spell/
+undo/
+swap/
+backup/
+shada/
+
+# Lazy.nvim data
+.lazy/
+
+# LSP and tool configuration (generated)
+.luarc.json
+.neoconf.json
+
+# Plugin lock file (uncomment to ignore, but tracking ensures same plugin versions across machines)
+# lazy-lock.json
+
+# macOS
+.DS_Store
+
+# Log files
+*.log
