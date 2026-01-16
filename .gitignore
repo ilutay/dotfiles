@@ -1,0 +1,11 @@
+# Secrets - manage manually
+**/.env
+**/*secret*
+**/*credential*
+**/private/
+
+# History files
+.zsh_history
+
+# OS files
+.DS_Store
