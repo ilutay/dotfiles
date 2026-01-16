@@ -1,4 +1,8 @@
 #!/usr/bin/env zsh
+
+# Homebrew
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
 # Multi-project worktree manager with Claude support
 # 
 # ASSUMPTIONS & SETUP:
