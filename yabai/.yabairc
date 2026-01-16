@@ -1,0 +1,41 @@
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
+sudo yabai --load-sa
+
+#layout
+yabai -m config layout bsp
+yabai -m config window_placement second_child
+yabai -m config auto_balance off
+yabai -m config split_ratio 0.5
+
+# mouse
+# set mouse interaction modifier key (default: fn)
+yabai -m config mouse_modifier fn
+# set modifier + left-click drag to move window (default: move)
+yabai -m config mouse_action1 move
+# set modifier + right-click drag to resize window (default: resize)
+yabai -m config mouse_action2 resize
+# focus behavior (important on macOS)
+yabai -m config focus_follows_mouse off
+yabai -m config mouse_follows_focus off
+
+# spacing (macOS-friendly)
+yabai -m config window_gap 8
+yabai -m config top_padding 8
+yabai -m config bottom_padding 8
+yabai -m config left_padding 8
+yabai -m config right_padding 8
+
+# focus behavior (important on macOS)
+yabai -m config focus_follows_mouse off
+yabai -m config mouse_follows_focus off
+
+# visuals
+yabai -m config window_shadow on
+
+yabai -m rule --add app="System Settings" manage=off
+yabai -m rule --add app="Calculator" manage=off
+yabai -m rule --add app="Preview" manage=off
+yabai -m rule --add app="^Obsidian$" manage=on
+
+# Janky Border git
+borders style=round width=6.0 hidpi=off active_color=0xc0e2e2e3 inactive_color=0xc02c2e34 background_color=0x302c2e34 blur_radius=25 &

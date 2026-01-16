@@ -1,0 +1,59 @@
+############################################################
+# skhd – macOS Vim / tmux window management
+# Mac modifier keys:
+# ⌥  = Option (alt)
+# ⌃  = Control (ctrl)
+# ⇧  = Shift
+# ⌘  = Command (cmd)  ← intentionally NOT used
+#############################
+# 🧭 Window Focus (⌥ + hjkl)
+# ⌥h ⌥j ⌥k ⌥l
+#############################
+cmd + ctrl - h : yabai -m window --focus west   # ⌥ + h → focus left
+cmd + ctrl - j : yabai -m window --focus south  # ⌥ + j → focus down
+cmd + ctrl - k : yabai -m window --focus north  # ⌥ + k → focus up
+cmd + ctrl - l : yabai -m window --focus east   # ⌥ + l → focus right
+#############################
+# 🔀 Move Windows (⇧ + ⌥)
+# ⇧⌥h ⇧⌥j ⇧⌥k ⇧⌥l
+#############################
+# shift + cmd + ctrl - h : yabai -m window --swap west   # ⇧⌥h → move window left
+# shift + cmd +  - j : yabai -m window --swap south  # ⇧⌥j → move window down
+# shift + alt - k : yabai -m window --swap north  # ⇧⌥k → move window up
+# shift + alt - l : yabai -m window --swap east   # ⇧⌥l → move window right
+#############################
+# 📐 Resize Windows (⌃ + ⌥)
+# ⌃⌥h ⌃⌥j ⌃⌥k ⌃⌥l
+#############################
+shift + cmd + ctrl - h : yabai -m window --resize left:-40:0    # ⌃⌥h → shrink from left
+shift + cmd + ctrl - j : yabai -m window --resize bottom:0:40  # ⌃⌥j → grow downward
+shift + cmd + ctrl - k : yabai -m window --resize top:0:-40    # ⌃⌥k → shrink upward
+shift + cmd + ctrl - l : yabai -m window --resize right:40:0   # ⌃⌥l → grow to the right
+#############################
+# 🪟 Floating & Layout
+#############################
+cmd + ctrl - space : yabai -m window --toggle float
+# ⌥ + Space → toggle floating (macOS dialogs, popups)
+cmd + ctrl - f : yabai -m window --toggle zoom-fullscreen
+# ⌥ + f → fullscreen without macOS Spaces
+cmd + ctrl - b : yabai -m space --balance
+# ⌥ + b → rebalance all windows on screen
+#############################
+# 🔳 Optional (Single Monitor)
+#############################
+cmd + ctrl - s : yabai -m window --toggle stack
+# ⌥ + s → stack windows (great for browsers)
+cmd + ctrl - r : yabai -m space --rotate 90
+# ⌥ + r → rotate layout clockwise
+
+# Move Spaces
+cmd + ctrl - c: yabai -m space --create
+cmd + ctrl - m: yabai -m space --focus 1
+cmd + ctrl - n: yabai -m space --focus next
+cmd + ctrl - p: yabai -m space --focus prev
+
+# Move window (app) to Spaces
+cmd + ctrl - 1: yabai -m window --space 1
+cmd + ctrl - 2: yabai -m window --space 2
+cmd + ctrl - 3: yabai -m window --space 3
+cmd + ctrl - 4: yabai -m window --space 4
