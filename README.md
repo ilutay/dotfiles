@@ -1,5 +1,7 @@
 # Dotfiles
 
+![Neovim, Kitty, Yabai vs VS Code](readme_logo.png)
+
 My dotfiles managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
 ## Structure
