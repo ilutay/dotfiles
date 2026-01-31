@@ -57,7 +57,146 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 w() {
     local projects_dir="$HOME/personal"
     local worktrees_dir="$HOME/personal/worktrees"
-    
+
+    # Helper: Detect project type from main repo
+    _w_detect_project_type() {
+        local main_repo="$1"
+        local -a types=()
+        [[ -f "$main_repo/package.json" ]] && types+=("nodejs")
+        [[ -f "$main_repo/pyproject.toml" || -f "$main_repo/requirements.txt" ]] && types+=("python")
+        echo "${types[@]}"
+    }
+
+    # Helper: Setup Node.js environment
+    _w_setup_nodejs() {
+        local main_repo="$1"
+        local wt_path="$2"
+
+        echo "Setting up Node.js..."
+
+        # Check if node_modules exists in main repo
+        if [[ ! -d "$main_repo/node_modules" ]]; then
+            echo "  Installing dependencies in main repo..."
+            (cd "$main_repo" && npm install) || {
+                echo "  Failed to install dependencies in main repo"
+                return 1
+            }
+        fi
+
+        # Create symlink in worktree
+        echo "  Linking node_modules from main repo..."
+        ln -s "$main_repo/node_modules" "$wt_path/node_modules"
+    }
+
+    # Helper: Setup Python environment
+    _w_setup_python() {
+        local main_repo="$1"
+        local wt_path="$2"
+
+        # Check if uv is installed
+        if ! command -v uv &> /dev/null; then
+            echo "Error: uv is not installed."
+            echo "Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+            return 1
+        fi
+
+        echo "Setting up Python..."
+
+        # Deactivate any existing venv
+        [[ -n "$VIRTUAL_ENV" ]] && deactivate
+
+        # Create fresh venv with uv
+        echo "  Creating virtual environment with uv..."
+        uv venv "$wt_path/.venv" || {
+            echo "  Failed to create virtual environment"
+            return 1
+        }
+
+        # Install dependencies
+        echo "  Installing Python dependencies..."
+        (
+            cd "$wt_path"
+            source "$wt_path/.venv/bin/activate"
+            if [[ -f "$wt_path/pyproject.toml" ]]; then
+                uv sync
+            elif [[ -f "$wt_path/requirements.txt" ]]; then
+                uv pip install -r requirements.txt
+            fi
+        ) || {
+            echo "  Failed to install Python dependencies"
+            return 1
+        }
+
+        # Activate venv
+        source "$wt_path/.venv/bin/activate"
+        echo "  Activated venv: $wt_path/.venv"
+    }
+
+    # Helper: Copy .env file
+    _w_setup_env() {
+        local main_repo="$1"
+        local wt_path="$2"
+
+        if [[ -f "$main_repo/.env" ]]; then
+            echo "Copying .env from main repo..."
+            cp "$main_repo/.env" "$wt_path/.env"
+        fi
+    }
+
+    # Helper: Full worktree setup
+    _w_setup_worktree() {
+        local main_repo="$1"
+        local wt_path="$2"
+
+        echo "Detecting project type..."
+        local types=($(_w_detect_project_type "$main_repo"))
+
+        if [[ ${#types[@]} -eq 0 ]]; then
+            echo "  No package.json or pyproject.toml/requirements.txt found"
+        else
+            for type in "${types[@]}"; do
+                case "$type" in
+                    nodejs)
+                        echo "  Found: package.json (Node.js)"
+                        ;;
+                    python)
+                        if [[ -f "$main_repo/pyproject.toml" ]]; then
+                            echo "  Found: pyproject.toml (Python)"
+                        else
+                            echo "  Found: requirements.txt (Python)"
+                        fi
+                        ;;
+                esac
+            done
+        fi
+
+        # Run setups
+        for type in "${types[@]}"; do
+            case "$type" in
+                nodejs)
+                    _w_setup_nodejs "$main_repo" "$wt_path"
+                    ;;
+                python)
+                    _w_setup_python "$main_repo" "$wt_path"
+                    ;;
+            esac
+        done
+
+        # Copy .env
+        _w_setup_env "$main_repo" "$wt_path"
+    }
+
+    # Helper: Activate venv if exists (for cd mode)
+    _w_activate_venv_if_exists() {
+        local wt_path="$1"
+
+        if [[ -d "$wt_path/.venv" ]]; then
+            # Deactivate any existing venv first
+            [[ -n "$VIRTUAL_ENV" ]] && deactivate
+            source "$wt_path/.venv/bin/activate"
+        fi
+    }
+
     # Handle special flags
     if [[ "$1" == "--list" ]]; then
         echo "=== All Worktrees ==="
@@ -87,41 +226,101 @@ w() {
             echo "Usage: w --rm <project> <worktree>"
             return 1
         fi
-        # Check both locations for core
+
+        # Determine worktree path
+        local wt_path=""
         if [[ "$project" == "core" && -d "$projects_dir/core-wts/$worktree" ]]; then
-            (cd "$projects_dir/$project" && git worktree remove "$projects_dir/core-wts/$worktree")
+            wt_path="$projects_dir/core-wts/$worktree"
         else
-            local wt_path="$worktrees_dir/$project/$worktree"
-            if [[ ! -d "$wt_path" ]]; then
-                echo "Worktree not found: $wt_path"
-                return 1
-            fi
-            (cd "$projects_dir/$project" && git worktree remove "$wt_path")
+            wt_path="$worktrees_dir/$project/$worktree"
         fi
+
+        if [[ ! -d "$wt_path" ]]; then
+            echo "Worktree not found: $wt_path"
+            return 1
+        fi
+
+        # Safety: Remove symlinked node_modules first to avoid affecting main repo
+        if [[ -L "$wt_path/node_modules" ]]; then
+            echo "Removing node_modules symlink..."
+            rm "$wt_path/node_modules"
+        fi
+
+        # Remove the worktree
+        (cd "$projects_dir/$project" && git worktree remove "$wt_path")
         return $?
+    elif [[ "$1" == "--sync" ]]; then
+        shift
+        local project="$1"
+        local worktree="$2"
+        if [[ -z "$project" || -z "$worktree" ]]; then
+            echo "Usage: w --sync <project> <worktree>"
+            return 1
+        fi
+
+        local main_repo="$projects_dir/$project"
+        local wt_path="$worktrees_dir/$project/$worktree"
+
+        # Check for core legacy location
+        if [[ "$project" == "core" && -d "$projects_dir/core-wts/$worktree" ]]; then
+            wt_path="$projects_dir/core-wts/$worktree"
+        fi
+
+        if [[ ! -d "$wt_path" ]]; then
+            echo "Worktree not found: $wt_path"
+            return 1
+        fi
+
+        # Check if both have package.json
+        if [[ -f "$main_repo/package.json" && -f "$wt_path/package.json" ]]; then
+            # Compare package.json files
+            if ! diff -q "$main_repo/package.json" "$wt_path/package.json" > /dev/null 2>&1; then
+                echo "Dependencies differ - running npm install..."
+                # Remove symlink if it exists
+                if [[ -L "$wt_path/node_modules" ]]; then
+                    rm "$wt_path/node_modules"
+                fi
+                (cd "$wt_path" && npm install)
+            else
+                echo "Dependencies are in sync."
+            fi
+        else
+            echo "No package.json found in both main repo and worktree."
+        fi
+        return 0
     fi
-    
+
     # Normal usage: w <project> <worktree> [command...]
     local project="$1"
     local worktree="$2"
     shift 2
     local command=("$@")
-    
+
     if [[ -z "$project" || -z "$worktree" ]]; then
         echo "Usage: w <project> <worktree> [command...]"
         echo "       w --list"
         echo "       w --rm <project> <worktree>"
+        echo "       w --sync <project> <worktree>"
         return 1
     fi
-    
+
     # Check if project exists
     if [[ ! -d "$projects_dir/$project" ]]; then
         echo "Project not found: $projects_dir/$project"
         return 1
     fi
-    
+
+    local main_repo="$projects_dir/$project"
+
+    # Handle "main" as special worktree name to go to main repo
+    if [[ "$worktree" == "main" ]]; then
+        cd "$main_repo"
+        return 0
+    fi
+
     # Determine worktree path - check multiple locations
     local wt_path=""
+    local is_new_worktree=false
     if [[ "$project" == "core" ]]; then
         # For core, check old location first
         if [[ -d "$projects_dir/core-wts/$worktree" ]]; then
@@ -135,29 +334,37 @@ w() {
             wt_path="$worktrees_dir/$project/$worktree"
         fi
     fi
-    
+
     # If worktree doesn't exist, create it
     if [[ -z "$wt_path" || ! -d "$wt_path" ]]; then
         echo "Creating new worktree: $worktree"
-        
+        is_new_worktree=true
+
         # Ensure worktrees directory exists
         mkdir -p "$worktrees_dir/$project"
-        
+
         # Determine branch name (use current username prefix)
         local branch_name="$USER/$worktree"
-        
+
         # Create the worktree in new location
         wt_path="$worktrees_dir/$project/$worktree"
         (cd "$projects_dir/$project" && git worktree add "$wt_path" -b "$branch_name") || {
             echo "Failed to create worktree"
             return 1
         }
+
+        # Run setup for new worktree
+        _w_setup_worktree "$main_repo" "$wt_path"
+
+        echo "Done! You are now in: $wt_path"
     fi
-    
+
     # Execute based on number of arguments
     if [[ ${#command[@]} -eq 0 ]]; then
         # No command specified - just cd to the worktree
         cd "$wt_path"
+        # Auto-activate venv if exists (only for cd mode, not pass-through commands)
+        _w_activate_venv_if_exists "$wt_path"
     else
         # Command specified - run it in the worktree without cd'ing
         local old_pwd="$PWD"
@@ -183,8 +390,9 @@ _w() {
     
     # Define the main arguments
     _arguments -C \
-        '(--rm)--list[List all worktrees]' \
-        '(--list)--rm[Remove a worktree]' \
+        '(--rm --sync)--list[List all worktrees]' \
+        '(--list --sync)--rm[Remove a worktree]' \
+        '(--list --rm)--sync[Sync dependencies if package.json differs]' \
         '1: :->project' \
         '2: :->worktree' \
         '3: :->command' \
