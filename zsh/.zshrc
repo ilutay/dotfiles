@@ -249,6 +249,98 @@ w() {
         # Remove the worktree
         (cd "$projects_dir/$project" && git worktree remove "$wt_path")
         return $?
+    elif [[ "$1" == "--clean" ]]; then
+        shift
+        local project="$1"
+        local force=false
+        [[ "$2" == "--force" ]] && force=true
+        if [[ -z "$project" ]]; then
+            echo "Usage: w --clean <project> [--force]"
+            echo "Removes ALL worktrees for a project."
+            echo "  --force  Remove even with uncommitted changes"
+            return 1
+        fi
+
+        local main_repo="$projects_dir/$project"
+        if [[ ! -d "$main_repo/.git" ]]; then
+            echo "Not a git repo: $main_repo"
+            return 1
+        fi
+
+        # Collect all worktree paths (skip the main working tree)
+        local -a wt_paths
+        wt_paths=("${(@f)$(cd "$main_repo" && git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //')}")
+
+        local count=0
+        for wt in "${wt_paths[@]}"; do
+            [[ "$wt" == "$main_repo" ]] && continue
+            count=$((count + 1))
+        done
+
+        if (( count == 0 )); then
+            echo "No worktrees to clean for $project."
+            return 0
+        fi
+
+        echo "Found $count worktree(s) for $project:"
+        for wt in "${wt_paths[@]}"; do
+            [[ "$wt" == "$main_repo" ]] && continue
+            echo "  • $wt"
+        done
+
+        echo ""
+        read -q "REPLY?Remove all $count worktree(s)? [y/N] "
+        echo ""
+        if [[ "$REPLY" != "y" ]]; then
+            echo "Aborted."
+            return 0
+        fi
+
+        # If currently inside a worktree, cd out first
+        local cwd="$PWD"
+        for wt in "${wt_paths[@]}"; do
+            [[ "$wt" == "$main_repo" ]] && continue
+            if [[ "$cwd" == "$wt"* ]]; then
+                echo "You're inside a worktree — moving to main repo."
+                cd "$main_repo"
+                break
+            fi
+        done
+
+        local removed=0 skipped=0
+        for wt in "${wt_paths[@]}"; do
+            [[ "$wt" == "$main_repo" ]] && continue
+            # Remove symlinked node_modules first
+            if [[ -L "$wt/node_modules" ]]; then
+                rm "$wt/node_modules"
+            fi
+            if $force; then
+                echo "Removing: $wt"
+                (cd "$main_repo" && git worktree remove --force "$wt") && removed=$((removed + 1))
+            else
+                if (cd "$wt" && git diff --quiet && git diff --cached --quiet) 2>/dev/null; then
+                    echo "Removing: $wt"
+                    (cd "$main_repo" && git worktree remove "$wt") && removed=$((removed + 1))
+                else
+                    echo "Skipping (uncommitted changes): $wt"
+                    skipped=$((skipped + 1))
+                fi
+            fi
+        done
+
+        # Prune any stale worktree references
+        (cd "$main_repo" && git worktree prune)
+
+        # Clean up empty directories in worktrees_dir
+        local project_wt_dir="$worktrees_dir/$project"
+        if [[ -d "$project_wt_dir" ]]; then
+            find "$project_wt_dir" -mindepth 1 -type d -empty -delete 2>/dev/null
+            rmdir "$project_wt_dir" 2>/dev/null
+        fi
+
+        echo "Done. Removed $removed/$count worktree(s)."
+        (( skipped > 0 )) && echo "Skipped $skipped with uncommitted changes. Use --force to remove them."
+        return 0
     elif [[ "$1" == "--sync" ]]; then
         shift
         local project="$1"
@@ -300,6 +392,7 @@ w() {
         echo "Usage: w <project> <worktree> [command...]"
         echo "       w --list"
         echo "       w --rm <project> <worktree>"
+        echo "       w --clean <project> [--force]"
         echo "       w --sync <project> <worktree>"
         return 1
     fi
@@ -390,9 +483,10 @@ _w() {
     
     # Define the main arguments
     _arguments -C \
-        '(--rm --sync)--list[List all worktrees]' \
-        '(--list --sync)--rm[Remove a worktree]' \
-        '(--list --rm)--sync[Sync dependencies if package.json differs]' \
+        '(--rm --sync --clean)--list[List all worktrees]' \
+        '(--list --sync --clean)--rm[Remove a worktree]' \
+        '(--list --rm --sync)--clean[Remove ALL worktrees for a project]' \
+        '(--list --rm --clean)--sync[Sync dependencies if package.json differs]' \
         '1: :->project' \
         '2: :->worktree' \
         '3: :->command' \
