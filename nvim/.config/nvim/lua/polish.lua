@@ -45,3 +45,18 @@ vim.api.nvim_set_hl(0, "FoldColumn", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "TabLine", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "TabLineSel", { bg = "#504945", fg = "#ebdbb2", bold = true })
 vim.api.nvim_set_hl(0, "TabLineFill", { bg = "NONE" })
+
+-- Soft-wrap markdown for small screens (mosh/iPhone)
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "markdown" },
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true
+    vim.opt_local.breakindent = true
+    vim.opt_local.textwidth = 0
+
+    local opts = { buffer = true, silent = true }
+    vim.keymap.set("n", "j", "gj", opts)
+    vim.keymap.set("n", "k", "gk", opts)
+  end,
+})
