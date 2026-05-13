@@ -645,3 +645,10 @@ export PATH="$PATH:$HOME/personal/worldbanc/private/bin"
 
 # Starship prompt
 eval "$(starship init zsh)"
+
+# bun completions
+[ -s "/Users/ilutay_playrcart/.bun/_bun" ] && source "/Users/ilutay_playrcart/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

@@ -60,3 +60,49 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "k", "gk", opts)
   end,
 })
+
+-- Soft-wrap code files on small screens (mosh/iPhone).
+-- Unlike markdown: do NOT touch textwidth (would disable auto-wrap on insert),
+-- and use breakindentopt + showbreak so wrapped continuations stay visually
+-- nested under their parent line — critical for reading code.
+local small_screen_width = 100
+
+local function apply_code_softwrap()
+  vim.opt_local.wrap = true
+  vim.opt_local.linebreak = true
+  vim.opt_local.breakindent = true
+  vim.opt_local.breakindentopt = "shift:2,sbr"
+  vim.opt_local.showbreak = "↪ "
+
+  local opts = { buffer = true, silent = true }
+  vim.keymap.set("n", "j", "gj", opts)
+  vim.keymap.set("n", "k", "gk", opts)
+  vim.keymap.set("n", "0", "g0", opts)
+  vim.keymap.set("n", "$", "g$", opts)
+end
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = {
+    "typescript", "typescriptreact",
+    "javascript", "javascriptreact",
+    "python", "lua", "go", "rust", "sh", "bash", "zsh",
+    "json", "yaml", "toml",
+  },
+  callback = function()
+    if vim.o.columns < small_screen_width then
+      apply_code_softwrap()
+    end
+  end,
+})
+
+-- Manual toggle for cases where auto-detection misses (e.g. resizing mid-session).
+vim.api.nvim_create_user_command("SoftWrap", function()
+  if vim.wo.wrap then
+    vim.opt_local.wrap = false
+    vim.opt_local.linebreak = false
+    vim.opt_local.breakindent = false
+    vim.opt_local.showbreak = ""
+  else
+    apply_code_softwrap()
+  end
+end, { desc = "Toggle code-aware soft wrap for current buffer" })
