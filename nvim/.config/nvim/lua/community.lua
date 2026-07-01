@@ -1,8 +1,11 @@
--- ~/.config/nvim/lua/community.lua
+-- AstroCommunity: import any community modules here
+-- We import this file in `lazy_setup.lua` before the `plugins/` folder.
+-- This guarantees that the specs are processed before any user plugins.
+
+---@type LazySpec
 return {
   "AstroNvim/astrocommunity",
 
-  -- example imports (optional)
   { import = "astrocommunity.colorscheme.gruvbox-nvim" },
   -- { import = "astrocommunity.pack.typescript" },
   { import = "astrocommunity.color.transparent-nvim" },
@@ -27,4 +30,3 @@ return {
     },
   },
 }
-
