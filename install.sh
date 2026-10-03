@@ -10,7 +10,7 @@ if ! command -v stow &> /dev/null; then
 fi
 
 # Stow all packages
-for package in yabai skhd nvim kitty tmux zsh; do
+for package in yabai skhd nvim kitty tmux zsh bin; do
     echo "Stowing $package..."
     stow -v -t ~ "$package"
 done

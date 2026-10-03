@@ -1,0 +1,9 @@
+[user]
+	name = ilutay
+	email = lutayilya@gmail.com
+[color "diff"]
+  new = cyan
+[init]
+	defaultBranch = master
+[pull]
+	rebase = true
