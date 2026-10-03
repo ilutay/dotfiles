@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 # Homebrew
-eval "$(/opt/homebrew/bin/brew shellenv)"
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # Multi-project worktree manager with Claude support
 # 
@@ -608,31 +608,35 @@ plugins=(
   git
   bundler
   dotenv
-  macos
   npm
   zsh-autosuggestions
 )
+[[ "$OSTYPE" == darwin* ]] && plugins+=(macos)
 source $ZSH/oh-my-zsh.sh
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /opt/homebrew/bin/terraform terraform
+[[ -x /opt/homebrew/bin/terraform ]] && complete -o nospace -C /opt/homebrew/bin/terraform terraform
 
-eval "$(thefuck --alias)"
+command -v thefuck >/dev/null && eval "$(thefuck --alias)"
 
-source $HOME/.config/broot/launcher/bash/br
+[ -f "$HOME/.config/broot/launcher/bash/br" ] && source "$HOME/.config/broot/launcher/bash/br"
 
-source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-eval "$(direnv hook zsh)"
+# zsh-syntax-highlighting: Homebrew path on macOS, apt path on Linux
+for _zsh_hl in /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh; do
+  [ -r "$_zsh_hl" ] && source "$_zsh_hl" && break
+done
+unset _zsh_hl
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 
 # Created by `pipx` on 2024-04-15 22:22:52
 export PATH="$PATH:$HOME/.local/bin"
-export PATH="/opt/homebrew/opt/postgresql@15/bin:$PATH"
+[ -d /opt/homebrew/opt/postgresql@15/bin ] && export PATH="/opt/homebrew/opt/postgresql@15/bin:$PATH"
 ___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init - zsh)"
+command -v pyenv >/dev/null && eval "$(pyenv init - zsh)"
 
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
@@ -644,11 +648,17 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="$PATH:$HOME/personal/worldbanc/private/bin"
 
 # Starship prompt
-eval "$(starship init zsh)"
+command -v starship >/dev/null && eval "$(starship init zsh)"
 
 # bun completions
-[ -s "/Users/ilutay_playrcart/.bun/_bun" ] && source "/Users/ilutay_playrcart/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+# Linux (box): pnpm standalone install + Neovim tarball in /opt
+if [[ "$OSTYPE" == linux* ]]; then
+  export PNPM_HOME="$HOME/.local/share/pnpm"
+  export PATH="$PNPM_HOME/bin:/opt/nvim-linux-x86_64/bin:$PATH"
+fi
