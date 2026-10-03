@@ -1,3 +1,15 @@
+-- Over SSH (box) there is no system clipboard: yank through the terminal with OSC 52.
+-- Paste reads Neovim's own register, so the terminal is never asked for clipboard read access.
+if vim.env.SSH_TTY then
+  local osc52 = require "vim.ui.clipboard.osc52"
+  local function paste() return { vim.fn.split(vim.fn.getreg "", "\n"), vim.fn.getregtype "" } end
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = { ["+"] = osc52.copy "+", ["*"] = osc52.copy "*" },
+    paste = { ["+"] = paste, ["*"] = paste },
+  }
+end
+
 -- This file simply bootstraps the installation of Lazy.nvim and then calls other files for execution
 -- This file doesn't necessarily need to be touched, BE CAUTIOUS editing this file and proceed at your own risk.
 local lazypath = vim.env.LAZY or vim.fn.stdpath "data" .. "/lazy/lazy.nvim"

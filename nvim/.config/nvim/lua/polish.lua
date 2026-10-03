@@ -106,3 +106,6 @@ vim.api.nvim_create_user_command("SoftWrap", function()
     apply_code_softwrap()
   end
 end, { desc = "Toggle code-aware soft wrap for current buffer" })
+
+-- Over SSH AstroNvim leaves 'clipboard' empty; route plain yanks to the OSC 52 provider set in init.lua.
+if vim.env.SSH_TTY then vim.opt.clipboard = "unnamedplus" end
