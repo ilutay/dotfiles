@@ -661,4 +661,9 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 if [[ "$OSTYPE" == linux* ]]; then
   export PNPM_HOME="$HOME/.local/share/pnpm"
   export PATH="$PNPM_HOME/bin:/opt/nvim-linux-x86_64/bin:$PATH"
+  # dotnet SDK installed per-user via dotnet-install.sh
+  if [ -d "$HOME/.dotnet" ]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+    export PATH="$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH"
+  fi
 fi
